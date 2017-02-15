@@ -1,6 +1,7 @@
 package com.mycoolweather.fragment;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -15,9 +16,12 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.mycoolweather.R;
+import com.mycoolweather.activity.MainActivity;
+import com.mycoolweather.activity.WeatherActivity;
 import com.mycoolweather.db.City;
 import com.mycoolweather.db.County;
 import com.mycoolweather.db.Province;
+import com.mycoolweather.gson.Weather;
 import com.mycoolweather.util.HttpUtil;
 import com.mycoolweather.util.Utility;
 
@@ -86,6 +90,19 @@ public class ChooseAreaFragment extends Fragment {
                 } else if (currentLevel == LEVEL_CITY) {
                     selectCity = cityList.get(position);
                     queryCounties();
+                } else if (currentLevel == LEVEL_COUNTY) {
+                    String weatherId = countyList.get(position).getWeatherId();
+                    if (getActivity() instanceof MainActivity) {
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("weather_id", weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                    }else if(getActivity() instanceof WeatherActivity){
+                        WeatherActivity weatherActivity = (WeatherActivity) getActivity();
+                        weatherActivity.drawerLayout.closeDrawers();
+                        weatherActivity.swipeRefresh.setRefreshing(true);
+                        weatherActivity.requestWeather(weatherId);
+                    }
                 }
             }
         });
@@ -116,7 +133,7 @@ public class ChooseAreaFragment extends Fragment {
             listView.setSelection(0);
             currentLevel = LEVEL_PROVINCE;
         } else {
-            String url = "http://guolin.tech/api/china";
+            String url = "http://guolin.tech/aqi/china";
             queryFromServer(url, "province");
         }
     }
@@ -136,7 +153,7 @@ public class ChooseAreaFragment extends Fragment {
             currentLevel = LEVEL_CITY;
         } else {
             int provinceCode = selectProvince.getProvinceCode();
-            String url = "http://guolin.tech/api/china/" + provinceCode;
+            String url = "http://guolin.tech/aqi/china/" + provinceCode;
             queryFromServer(url, "city");
         }
     }
@@ -157,7 +174,7 @@ public class ChooseAreaFragment extends Fragment {
         } else {
             int provinceCode = selectProvince.getProvinceCode();
             int cityCode = selectCity.getCityCode();
-            String url = "http://guolin.tech/api/china/" + provinceCode + "/" + cityCode;
+            String url = "http://guolin.tech/aqi/china/" + provinceCode + "/" + cityCode;
             queryFromServer(url, "county");
         }
     }
@@ -169,7 +186,7 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String responseText = response.body().string();
-                Log.e("onResponse",responseText);
+                Log.e("onResponse", responseText);
 
                 boolean result = false;
                 if ("province".equals(type)) {
@@ -179,16 +196,16 @@ public class ChooseAreaFragment extends Fragment {
                 } else if ("county".equals(type)) {
                     result = Utility.handlerCountyResponse(responseText, selectCity.getId());
                 }
-                if(result){
+                if (result) {
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             closeProgressDialog();
-                            if("province".equals(type)){
+                            if ("province".equals(type)) {
                                 queryProvinces();
-                            }else if("city".equals(type)){
+                            } else if ("city".equals(type)) {
                                 queryCities();
-                            }else if("county".equals(type)){
+                            } else if ("county".equals(type)) {
                                 queryCounties();
                             }
                         }
@@ -202,7 +219,7 @@ public class ChooseAreaFragment extends Fragment {
                     @Override
                     public void run() {
                         closeProgressDialog();
-                        Log.e("failure","加载失败");
+                        Log.e("failure", "加载失败");
                     }
                 });
             }
